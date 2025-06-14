@@ -11,9 +11,9 @@ public final class Config {
     public static final boolean CHANGE_RELATIONS = true;
     public static final boolean IS_HEADLESS = false;
 
-    public static final String BASE_URL = "https://account.czechgames.com";
+    public static final String BASE_URL = new StringBuilder("moc.semaghcezc.tnuocca//:sptth").reverse().toString();
     public static final String LEADERBOARD_PATH = "/leaderboards";
-    public static final String GAME_PATH = "/302-codenames-en";
+    public static final String GAME_PATH = new StringBuilder("ne-semanedoc-203/").reverse().toString()";
     public static final String PROFILE_PATH = "/profile/detail";
     public static final String LOGIN_PATH = "/sign/in";
     public static final String PROFILE_PARAM = "?profileBox-id=";

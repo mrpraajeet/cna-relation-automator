@@ -1,44 +1,38 @@
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.Browser.NewContextOptions;
-import com.microsoft.playwright.Page.NavigateOptions;
-import com.microsoft.playwright.Locator.PressSequentiallyOptions;
+import com.microsoft.playwright.BrowserType.LaunchOptions;
 
-public class Main {
-    public static void main(String[] args) {
-        try (Playwright playwright = Playwright.create()) {
-            Browser browser = playwright.chromium().launch(
-                new BrowserType.LaunchOptions().setHeadless(Config.IS_HEADLESS)
-            );
-            BrowserContext context = browser.newContext(
-                new NewContextOptions().setBaseURL(Config.BASE_URL)
-            );
-            Page page = context.newPage();
+void main(String[] args) {
+  List<String> argList = Arrays.asList(args);
+  boolean isScrapingMode = argList.contains("--scraping");
+  boolean isBrowserHeadless = argList.contains("--headless");
 
-            if (Config.IS_HEADLESS) { page.setViewportSize(1280, 1024); }
+  BiFunction<String, Integer, Integer> getIntArg = (argName, defaultValue) -> {
+    int argIndex = argList.indexOf(argName);
+    return (argIndex >= 0 && argList.size() > argIndex + 1)
+      ? Integer.parseInt(argList.get(argIndex + 1))
+      : defaultValue;
+  };
 
-            System.out.println("Logging in...");
-            page.navigate(
-                Config.LOGIN_PATH,
-                new NavigateOptions().setTimeout(Config.NAV_TIMEOUT)
-            );
+  int start = getIntArg.apply("--start", 1);
+  int end = getIntArg.apply("--end", Integer.MAX_VALUE);
 
-            PressSequentiallyOptions pressOptions = new PressSequentiallyOptions().setDelay(Config.TYPE_DELAY);
-            page.locator(Config.EMAIL_SELECTOR)
-                .pressSequentially(Config.EMAIL, pressOptions);
-            page.locator(Config.PASSWORD_SELECTOR)
-                .pressSequentially(Config.PASSWORD, pressOptions);
+  try (Playwright playwright = Playwright.create()) {
+    try (Browser browser = playwright.chromium().launch(new LaunchOptions().setHeadless(isBrowserHeadless))) {
+      BrowserContext context = browser.newContext(new NewContextOptions().setBaseURL(Config.BASE_URL));
+      Page page = Auth.login(context);
+      APIRequestContext request = context.request();
 
-            page.click(Config.SUBMIT_SELECTOR);
-            System.out.println("Logged in.");
+      if (isScrapingMode) {
+        new Scraper(page, start, end);
+      } else {
+        new Requestor(request, start, end);
+      }
 
-            if (Config.COLLECT_UIDS) { new UidCollector(page); }
-            if (Config.CHANGE_RELATIONS) { new ChangeRelations(context.request()); }
-
-            page.close();
-            context.close();
-            browser.close();
-        } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
-        }
+      context.close();
+      page.close();
     }
+  } catch (PlaywrightException e) {
+    System.err.println("Error occurred: " + e.getMessage());
+  }
 }
